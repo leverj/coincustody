@@ -1,0 +1,42 @@
+{
+  "name": "coincustody",
+  "version": "0.0.1",
+  "description": "decentralized coin custody for leverj.io platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bharathrao/coincustody.git"
+  },
+  "keywords": [
+    "decentralized",
+    "custody",
+    "leverj.io"
+  ],
+  "author": "coinpit",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bharathrao/coincustody/issues"
+  },
+  "homepage": "https://github.com/bharathrao/coincustody#readme",
+  "devDependencies": {
+    "bignumber.js": "^4.0.4",
+    "bip39": "2.4.0",
+    "bluebird": "^3.5.0",
+    "bn.js": "4.11.6",
+    "ethereumjs-testrpc": "4.0.1",
+    "ethereumjs-wallet": "0.6.0",
+    "ethjs-contract": "^0.1.9",
+    "ethjs-provider-http": "0.1.6",
+    "ethjs-query": "0.2.4",
+    "ethjs-rpc": "^0.1.7",
+    "expect.js": "^0.3.1",
+    "truffle-hdwallet-provider": "0.0.3",
+    "web3": "^1.0.0-beta.18"
+  },
+  "dependencies": {
+    "debug": "^3.0.1"
+  }
+}
