@@ -37,6 +37,8 @@
     "web3": "^1.0.0-beta.18"
   },
   "dependencies": {
-    "debug": "^3.0.1"
+    "debug": "^3.0.1",
+    "ethereumjs-abi": "^0.6.4",
+    "ethereumjs-util": "^5.1.2"
   }
 }
