@@ -30,6 +30,7 @@ contract('deposit', function (accounts) {
 
   it('user is able to send ether and tokens to custody contract', async function () {
     await lib.sendToken(100, user1, custody, token);
+    // await custody.depositToken(100, {from: user1});
     await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
     expect(await lib.balance(user1, token)).to.be.eql(9900);
     expect(await lib.balance(custody.address, token)).to.be.eql(100);
@@ -71,14 +72,8 @@ contract('Order posted', function (accounts) {
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(user2, token)).to.be.eql(9811);
     expect(await lib.balance(custody.address, token)).to.be.eql(279);
-// fixme: later
-    // expect((await custody.ethers(user1)).toNumber()).to.eql(10000000-10);
-    // expect((await custody.tokens(user1)).toNumber()).to.eql(100 -10);
-    // expect((await custody.ethers(user1)).toNumber()).to.eql(20000000 -11);
-    // expect((await custody.tokens(user1)).toNumber()).to.eql(200 -11);
-    //
-    // expect(await web3.eth.getBalance(custody.address)).to.eql(10000000);
-
+    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000-10);
+    expect((await custody.ethers(user2)).toNumber()).to.eql(20000000-11);
   });
 });
 

@@ -1,5 +1,20 @@
 const DEBUG = require('debug');
 const path = require('path');
+let bluebird = require('bluebird');
+const expect = require("expect.js");
+const fs = require('fs');
+const BN = require('bn.js');
+const HttpProvider = require('ethjs-provider-http');
+const EthRPC = require('ethjs-rpc');
+const EthQuery = require('ethjs-query');
+const Web3 = require('web3');
+const abi = require('ethereumjs-abi');
+const ethUtil = require('ethereumjs-util');
+
+const ethRPC = new EthRPC(new HttpProvider('http://localhost:8545'));
+const ethQuery = new EthQuery(new HttpProvider('http://localhost:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+
 
 function Debug(filename) {
   return DEBUG("CUSTODY:" + path.basename(filename));

@@ -10,6 +10,7 @@ pragma solidity ^0.4.11;
 */
 
 import "tokens/HumanStandardToken.sol";
+import "tokens/StandardToken.sol";
 
 
 contract Custody {
@@ -27,7 +28,7 @@ contract Custody {
     uint qty;
     }
 
-    event LOG(address _user, bytes32 _hash);
+    event LOG(address _user, uint256 _hash);
 
     event CustodyEvent(address _user, uint256 _value, string _unit, string _action);
 
@@ -41,11 +42,9 @@ contract Custody {
 
     address public owner;
 
-    StandardToken public token;
+    HumanStandardToken public token;
 
     uint256 public tokenCount;
-
-    uint256 public weiDeposited;
 
     modifier onlyOwner {
         require(msg.sender == owner);
@@ -70,11 +69,12 @@ contract Custody {
     function depositToken(uint256 _value) returns (bool result){
         tokenCount += _value;
         tokens[msg.sender] += _value;
-        token.transferFrom(msg.sender, this, _value);
-        //        token.delegatecall(bytes4(sha3("transfer(address,uin256)")), this, _value);
-        return true;
+        return token.transferFrom(msg.sender, this, _value);
+//        LOG(token, _value);
+//        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
     }
-//nonce needs to be added to prevent replay attack
+
+    //nonce needs to be added to prevent replay attack
     function withdraw(uint[] priceandqty,
     uint[] ids,
     bool[] isBuy,
@@ -89,7 +89,7 @@ contract Custody {
         require(isVerified(order2, users[1], v[1], r[1], s[1]));
         validateOrderAndExecution(order1, execution);
         validateOrderAndExecution(order2, execution);
-        send(users[0],  withdraws[0], withdraws[1]);
+        send(users[0], withdraws[0], withdraws[1]);
         send(users[1], withdraws[2], withdraws[3]);
     }
 
