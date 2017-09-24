@@ -43,6 +43,8 @@ contract Custody {
 
     address public owner;
 
+    uint freezeBlock;
+
     HumanStandardToken public token;
 
     uint256 public tokenCount;
@@ -57,12 +59,22 @@ contract Custody {
         require(!disabled);
         _;
     }
-
-    function Custody(address _owner){
-        owner = _owner;
+    modifier isDisabled{
+        require(disabled);
+        _;
     }
 
-    function setToken(address _token) onlyOwner {
+    modifier notFrozen {
+        require(block.number < freezeBlock);
+        _;
+    }
+
+    function Custody(address _owner, uint _freezeBlock){
+        owner = _owner;
+        freezeBlock = _freezeBlock;
+    }
+
+    function setToken(address _token) onlyOwner notFrozen{
         tokenid = _token;
         token = HumanStandardToken(_token);
     }
@@ -118,6 +130,10 @@ contract Custody {
         disabled = true;
     }
 
+    function recoverFunds() isDisabled{
+        send(msg.sender, ethers[msg.sender], tokens[msg.sender]);
+    }
+
     function send(address _user, uint256 _eth, uint256 _tokens) internal {
         require(ethers[_user] >= _eth);
         require(tokens[_user] >= _tokens);
@@ -156,7 +172,4 @@ contract Custody {
         filled[order1.uuid] += execution.qty;
         filled[order2.uuid] += execution.qty;
     }
-
-
-
 }

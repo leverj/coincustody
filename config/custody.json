@@ -1,4 +1,5 @@
 {
   "owner": "0xa2ed424d3588e5c10988a30b8a9d5085d1608b69",
-  "tokenid": "0xc8a6631d29db5cc70ba931fd7f26b7155f9c1740"
+  "tokenid": "0xc8a6631d29db5cc70ba931fd7f26b7155f9c1740",
+  "freezeBlock": "100"
 }

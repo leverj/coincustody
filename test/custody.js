@@ -115,7 +115,7 @@ contract('replay attack', function (accounts) {
         [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
       expect().fail("Should not pass");
     } catch (e) {
-      expect(e.message).to.not.eql("Should not pass");
+      expect(e.message).to.eql("VM Exception while processing transaction: invalid opcode");
     }
   });
 });
@@ -150,7 +150,7 @@ contract('User halting custody contract', function (accounts) {
       await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy, cv, cr, cs);
       expect().fail("should have failed");
     } catch (e) {
-      expect(e.message).to.not.eql("should have failed");
+      expect(e.message).to.eql("VM Exception while processing transaction: invalid opcode");
     }
     // compromised exchange sends execution with cancelled order of user1.
     await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
@@ -211,6 +211,25 @@ contract('User halting custody contract for partial cancelled', function (accoun
   });
 });
 
+contract("owner can not change tokenid after freezeBlock", function (accounts) {
+  let token, custody;
+  let user1 = accounts[1];
+  let user2 = accounts[2];
+
+  before(async function () {
+    [token, custody] = await setup(accounts);
+  });
+
+  it("should not be able to change token id after freezeBlock", async function () {
+    await lib.forceMine(new BN(300));
+    try {
+      await custody.setToken(token.address);
+      expect().fail('should have fail')
+    } catch (e) {
+      expect(e.message).to.eql('VM Exception while processing transaction: invalid opcode');
+    }
+  });
+});
 
 function bytes32() {
   const buffer = new Buffer(32);
@@ -237,3 +256,4 @@ async function setup(accounts) {
   await custody.setToken(token.address);
   return [token, custody];
 }
+
