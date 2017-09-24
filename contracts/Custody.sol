@@ -18,7 +18,7 @@ contract Custody {
     struct Order {
     uint uuid;
     uint price;
-    uint qty;
+    uint256 qty;
     bool isBuy;
     }
 
@@ -28,7 +28,8 @@ contract Custody {
     uint qty;
     }
 
-    event LOG(address _user, uint256 _hash);
+
+    event LOG(address _user, address calaculated, bytes32 _hash);
 
     event CustodyEvent(address _user, uint256 _value, string _unit, string _action);
 
@@ -36,7 +37,7 @@ contract Custody {
 
     mapping (address => uint256) public tokens;
 
-    mapping (address => string) signatures;
+    mapping (uint => uint) public filled;
 
     address public tokenid;
 
@@ -70,8 +71,31 @@ contract Custody {
         tokenCount += _value;
         tokens[msg.sender] += _value;
         return token.transferFrom(msg.sender, this, _value);
-//        LOG(token, _value);
-//        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
+        //        LOG(token, _value);
+        //        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
+    }
+
+
+    function syncExecutions(uint[] priceandqty,
+    uint[] ids,
+    bool[] isBuy,
+    address[] users,
+    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner {
+        Order memory order1 = Order(ids[0], priceandqty[0], priceandqty[1], isBuy[0]);
+        Order memory order2 = Order(ids[1], priceandqty[2], priceandqty[3], isBuy[1]);
+        Execution memory execution = Execution(ids[2], priceandqty[4], priceandqty[5]);
+        require(isVerified(order1, users[0], v[0], r[0], s[0]));
+        require(isVerified(order2, users[1], v[1], r[1], s[1]));
+        updateOrderQuantities(order1, order2, execution);
+        validateOrderAndExecution(order1, execution);
+        validateOrderAndExecution(order2, execution);
+    }
+
+    function updateOrderQuantities(Order order1, Order order2, Execution execution) internal {
+        require(order1.qty - filled[order1.uuid] >= execution.qty);
+        require(order2.qty - filled[order2.uuid] >= execution.qty);
+        filled[order1.uuid] += execution.qty;
+        filled[order2.uuid] += execution.qty;
     }
 
     //nonce needs to be added to prevent replay attack
@@ -82,13 +106,7 @@ contract Custody {
     uint256[] withdraws,
     uint8[] v, bytes32[] r, bytes32[] s) onlyOwner {
         // loop over all pending executions
-        Order memory order1 = Order(ids[0], priceandqty[0], priceandqty[1], isBuy[0]);
-        Order memory order2 = Order(ids[1], priceandqty[2], priceandqty[3], isBuy[1]);
-        Execution memory execution = Execution(ids[2], priceandqty[4], priceandqty[5]);
-        require(isVerified(order1, users[0], v[0], r[0], s[0]));
-        require(isVerified(order2, users[1], v[1], r[1], s[1]));
-        validateOrderAndExecution(order1, execution);
-        validateOrderAndExecution(order2, execution);
+        syncExecutions(priceandqty, ids, isBuy, users, v, r, s);
         send(users[0], withdraws[0], withdraws[1]);
         send(users[1], withdraws[2], withdraws[3]);
     }

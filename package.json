@@ -34,6 +34,7 @@
     "ethjs-rpc": "^0.1.7",
     "expect.js": "^0.3.1",
     "truffle-hdwallet-provider": "0.0.3",
+    "uuid": "^3.1.0",
     "web3": "^1.0.0-beta.18"
   },
   "dependencies": {
