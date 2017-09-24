@@ -18,8 +18,11 @@ contract Custody {
     struct Order {
     uint uuid;
     uint price;
-    uint256 qty;
+    uint qty;
+    uint cancelled;
+    uint expiry;
     bool isBuy;
+    address user;
     }
 
     struct Execution {
@@ -74,7 +77,7 @@ contract Custody {
         freezeBlock = _freezeBlock;
     }
 
-    function setToken(address _token) onlyOwner notFrozen{
+    function setToken(address _token) onlyOwner notFrozen {
         tokenid = _token;
         token = HumanStandardToken(_token);
     }
@@ -94,14 +97,10 @@ contract Custody {
     }
 
 
-    function syncExecutions(uint[] priceandqty,
-    uint[] ids,
-    bool[] isBuy,
-    address[] users,
-    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
-        Order memory order1 = Order(ids[0], priceandqty[0], priceandqty[1], isBuy[0]);
-        Order memory order2 = Order(ids[1], priceandqty[2], priceandqty[3], isBuy[1]);
-        Execution memory execution = Execution(ids[2], priceandqty[4], priceandqty[5]);
+    function syncExecutions(uint[] orderUINT, bool[] isBuy, address[] users, uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
+        Order memory order1 = Order(orderUINT[0], orderUINT[1], orderUINT[2], orderUINT[3], orderUINT[4], isBuy[0], users[0]);
+        Order memory order2 = Order(orderUINT[5], orderUINT[6], orderUINT[7], orderUINT[8], orderUINT[9], isBuy[1], users[1]);
+        Execution memory execution = Execution(orderUINT[10], orderUINT[11], orderUINT[12]);
         require(isVerified(order1, users[0], v[0], r[0], s[0]));
         require(isVerified(order2, users[1], v[1], r[1], s[1]));
         updateOrderQuantities(order1, order2, execution);
@@ -110,27 +109,18 @@ contract Custody {
     }
 
     //nonce needs to be added to prevent replay attack
-    function withdraw(uint[] priceandqty,
-    uint[] ids,
-    bool[] isBuy,
-    address[] users,
-    uint256[] withdraws,
-    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
-        // loop over all pending executions
-        syncExecutions(priceandqty, ids, isBuy, users, v, r, s);
-        send(users[0], withdraws[0], withdraws[1]);
-        send(users[1], withdraws[2], withdraws[3]);
+    function withdraw(address _user, uint256 _eth, uint256 _tokens) onlyOwner notDisabled {
+        send(_user, _eth, _tokens);
     }
 
-    function notifyReplay(uint uuid, uint price, uint qty, uint cancelled, bool isBuy, uint8 v, bytes32 r, bytes32 s){
-        bytes32 hash = keccak256(uuid, price, qty, cancelled, isBuy);
-        address signer = ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s);
-        require(signer == owner);
-        require(qty - cancelled < filled[uuid]);
+    function notifyReplay(uint[] orderUINT, bool isBuy, address user, uint8 v, bytes32 r, bytes32 s){
+        Order memory order = Order(orderUINT[0], orderUINT[1], orderUINT[2], orderUINT[3], orderUINT[4], isBuy, user);
+        require(isVerified(order, owner, v,r,s));
+        require(order.qty - order.cancelled < filled[order.uuid]);
         disabled = true;
     }
 
-    function recoverFunds() isDisabled{
+    function recoverFunds() isDisabled {
         send(msg.sender, ethers[msg.sender], tokens[msg.sender]);
     }
 
@@ -162,7 +152,7 @@ contract Custody {
     }
 
     function isVerified(Order order, address user, uint8 v, bytes32 r, bytes32 s) internal returns (bool result){
-        bytes32 hash = keccak256(order.uuid, order.price, order.qty, order.isBuy);
+        bytes32 hash = keccak256(order.uuid, order.price, order.qty, order.cancelled, order.expiry, order.isBuy, order.user);
         return user == ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s);
     }
 
@@ -172,4 +162,5 @@ contract Custody {
         filled[order1.uuid] += execution.qty;
         filled[order2.uuid] += execution.qty;
     }
+
 }

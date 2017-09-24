@@ -29,7 +29,7 @@ async function sendToken(count, user, contract, token) {
 function forceMine(blockToMine) {
   return new Promise(async (resolve, reject) => {
     if (!BN.isBN(blockToMine)) {
-      reject('Supplied block number must be a BN.');
+      blockToMine = new BN(blockToMine)
     }
     const blockNumber = await ethQuery.blockNumber();
     if (blockNumber.lt(blockToMine)) {

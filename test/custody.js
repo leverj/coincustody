@@ -14,6 +14,7 @@ const debug = lib.Debug(__filename);
 const abi = require('ethereumjs-abi');
 const ethUtil = require('ethereumjs-util');
 const uuid = require('uuid/v4');
+const _ = require('lodash');
 
 const ethRPC = new EthRPC(new HttpProvider('http://localhost:8545'));
 const ethQuery = new EthQuery(new HttpProvider('http://localhost:8545'));
@@ -59,17 +60,11 @@ contract('Order posted', function (accounts) {
    * execution, user1 order, user2 order check signature
    */
   it('user can withdraw through exchange', async function () {
-    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
-    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
-    let execution = {uuid: 3, price: 10, qty: 100};
-    let types = ['uint', 'uint', 'uint', 'bool'];
-    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
-    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
-    // console.log("R S", r1, s1, order1.uuid);
-    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-      [order1.uuid, order2.uuid, execution.uuid],
-      [order1.isBuy, order2.isBuy],
-      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+    let [order1, order2, execution] = orders(user1, user2);
+    await syncExecutions(custody, order1, order2, execution);
+    await lib.forceMine(300);
+    await custody.withdraw(user1, 10,10);
+    await custody.withdraw(user2, 11,11);
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(user2, token)).to.be.eql(9811);
     expect(await lib.balance(custody.address, token)).to.be.eql(279);
@@ -96,23 +91,10 @@ contract('replay attack', function (accounts) {
    * execution, user1 order, user2 order check signature
    */
   it('same order used twice to match should fail', async function () {
-    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
-    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
-    let execution = {uuid: 3, price: 10, qty: 100};
-    let types = ['uint', 'uint', 'uint', 'bool'];
-    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
-    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
-
-
-    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-      [order1.uuid, order2.uuid, execution.uuid],
-      [order1.isBuy, order2.isBuy],
-      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+    let [order1, order2, execution] = orders(user1, user2);
+    await syncExecutions(custody, order1, order2, execution);
     try {
-      await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-        [order1.uuid, order2.uuid, execution.uuid],
-        [order1.isBuy, order2.isBuy],
-        [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+      await syncExecutions(custody, order1, order2, execution);
       expect().fail("Should not pass");
     } catch (e) {
       expect(e.message).to.eql("VM Exception while processing transaction: invalid opcode");
@@ -138,29 +120,20 @@ contract('User halting custody contract', function (accounts) {
    * execution, user1 order, user2 order check signature
    */
   it('user should be able to halt custody contract if found any discrepancy to avoid further damage.', async function () {
-    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
-    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
-
-    let types = ['uint', 'uint', 'uint', 'bool'];
-    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
-    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
-    let [cv, cr, cs] = await getSignature(['uint', 'uint', 'uint', 'uint', 'bool'], [order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy], accounts[0]);
-    let execution = {uuid: 3, price: 10, qty: 100};
+    let [order1, order2, execution] = orders(user1, user2);
+    let cancel = _.clone(order1);
+    cancel.cancelled = order1.qty;
     try {
-      await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy, cv, cr, cs);
+      await notifyReplay(custody, cancel, accounts[0]);
       expect().fail("should have failed");
     } catch (e) {
       expect(e.message).to.eql("VM Exception while processing transaction: invalid opcode");
     }
     // compromised exchange sends execution with cancelled order of user1.
-    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-      [order1.uuid, order2.uuid, execution.uuid],
-      [order1.isBuy, order2.isBuy],
-      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
-
+    await syncExecutions(custody, order1, order2, execution);
     // user1 finds that his cancelled order has been executed by exchange,
     // therefore notifying custody contract.
-    await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy, cv, cr, cs, {from: user1});
+    await notifyReplay(custody, cancel, accounts[0]);
     expect(await custody.disabled()).to.eql(true);
   });
 });
@@ -183,30 +156,18 @@ contract('User halting custody contract for partial cancelled', function (accoun
    * execution, user1 order, user2 order check signature
    */
   it('user should be able to halt custody contract if found any discrepancy to avoid further damage.', async function () {
-    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
-    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
-
-    let types = ['uint', 'uint', 'uint', 'bool'];
-    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
-    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
-    let execution = {uuid: 3, price: 10, qty: 50};
+    let [order1, order2, execution] = orders(user1, user2);
+    execution.qty = 50;
     // exchange sends execution for half the quantity.
-    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-      [order1.uuid, order2.uuid, execution.uuid],
-      [order1.isBuy, order2.isBuy],
-      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+    await syncExecutions(custody, order1, order2, execution);
     // user1 cancels rest of the order
-    let [cv, cr, cs] = await getSignature(['uint', 'uint', 'uint', 'uint', 'bool'], [order1.uuid, order1.price, order1.qty, 50, order1.isBuy], accounts[0]);
-
     // compromised exchange sends execution with cancelled order of user1.
-    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
-      [order1.uuid, order2.uuid, execution.uuid],
-      [order1.isBuy, order2.isBuy],
-      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
-
+    await syncExecutions(custody, order1, order2, execution);
     // user1 finds that his cancelled order has been executed by exchange,
     // therefore notifying custody contract.
-    await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, 50, order1.isBuy, cv, cr, cs, {from: user1});
+    let cancel = _.clone(order1);
+    cancel.cancelled = 50;
+    await  notifyReplay(custody, cancel, accounts[0]);
     expect(await custody.disabled()).to.eql(true);
   });
 });
@@ -240,10 +201,11 @@ function bytes32() {
   // return buffer.toString('hex');
 }
 
-async function getSignature(types, values, user) {
+async function getSignature(order, signer) {
+  let types = ['uint', 'uint', 'uint', 'uint', 'uint', 'bool', 'address'];
+  let values = [order.uuid, order.price, order.qty, order.cancelled, order.expiry, order.isBuy, order.user];
   let hash = abi.soliditySHA3(types, values);
-  // console.log('user', user, 'types', types, 'values', values, 'hash', ethUtil.bufferToHex(hash));
-  let sig = await web3.eth.sign(ethUtil.bufferToHex(hash), user);
+  let sig = await web3.eth.sign(ethUtil.bufferToHex(hash), signer);
   let {v, r, s} = ethUtil.fromRpcSig(sig);
   return [v, ethUtil.bufferToHex(r), ethUtil.bufferToHex(s)];
 }
@@ -257,3 +219,44 @@ async function setup(accounts) {
   return [token, custody];
 }
 
+async function notifyReplay(custody, cancel, exchange){
+  let [cv, cr, cs] = await getSignature(cancel, exchange);
+  await  custody.notifyReplay([cancel.uuid, cancel.price, cancel.qty, cancel.cancelled, cancel.expiry], cancel.isBuy, cancel.user, cv, cr, cs, {from: cancel.user});
+
+}
+
+function withdrawParams(order1, order2, execution) {
+  let param1 = [
+    order1.uuid, order1.price, order1.qty, order1.cancelled, order1.expiry,
+    order2.uuid, order2.price, order2.qty, order2.cancelled, order2.expiry,
+    execution.uuid, execution.price, execution.qty
+  ];
+  let param2 = [order1.isBuy, order2.isBuy];
+  let param3 = [order1.user, order2.user];
+
+  return [param1, param2, param3];
+}
+
+function orderParams(order) {
+  let param1 = [order.uuid, order.price, order.qty, order.cancelled, order.expiry];
+  return [param1, order.isBuy, order.user];
+}
+
+async function syncExecutions(custody, order1, order2, execution) {
+  let [v1, r1, s1] = await getSignature(order1, order1.user);
+  let [v2, r2, s2] = await getSignature(order2, order2.user);
+  let param1 = [
+    order1.uuid, order1.price, order1.qty, order1.cancelled, order1.expiry,
+    order2.uuid, order2.price, order2.qty, order2.cancelled, order2.expiry,
+    execution.uuid, execution.price, execution.qty
+  ];
+  await custody.syncExecutions(param1, [order1.isBuy, order2.isBuy], [order1.user, order2.user], [v1, v2], [r1, r2], [s1, s2]);
+}
+
+function orders(user1, user2) {
+  let expiry = Math.round((Date.now() + 5 * 60 * 1000) / 1000);
+  let order1 = {uuid: 1, price: 10, qty: 100, cancelled: 0, isBuy: true, user: user1, expiry};
+  let order2 = {uuid: 2, price: 10, qty: 100, cancelled: 0, isBuy: false, user: user2, expiry};
+  let execution = {uuid: 3, price: 10, qty: 100};
+  return [order1, order2, execution];
+}
