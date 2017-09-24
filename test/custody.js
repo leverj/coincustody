@@ -63,8 +63,8 @@ contract('Order posted', function (accounts) {
     let [order1, order2, execution] = orders(user1, user2);
     await syncExecutions(custody, order1, order2, execution);
     await lib.forceMine(300);
-    await custody.withdraw(user1, 10,10);
-    await custody.withdraw(user2, 11,11);
+    await custody.withdraw(user1, 10, 10);
+    await custody.withdraw(user2, 11, 11);
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(user2, token)).to.be.eql(9811);
     expect(await lib.balance(custody.address, token)).to.be.eql(279);
@@ -192,6 +192,36 @@ contract("owner can not change tokenid after freezeBlock", function (accounts) {
   });
 });
 
+contract("withraw funds", function (accounts) {
+  let token, custody;
+  let user1 = accounts[1];
+  let user2 = accounts[2];
+
+  before(async function () {
+    [token, custody] = await setup(accounts);
+    await lib.sendToken(100, user1, custody, token);
+    await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
+    await lib.sendToken(200, user2, custody, token);
+    await web3.eth.sendTransaction({from: user2, to: custody.address, value: 20000000});
+  });
+
+  it("user should only able to withdraw fund after certain blocks have paased after last update.", async function () {
+    let [order1, order2, execution] = orders(user1, user2);
+    await syncExecutions(custody, order1, order2, execution);
+    try {
+      await custody.withdraw(user1, 10, 10);
+      expect().fail('should have fail');
+    } catch (e) {
+      expect(e.message).to.eql('VM Exception while processing transaction: invalid opcode');
+    }
+    await lib.forceMine(200);
+    await custody.withdraw(user1, 10, 10);
+    expect(await lib.balance(user1, token)).to.be.eql(9910);
+    expect(await lib.balance(custody.address, token)).to.be.eql(290);
+    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10);
+  })
+});
+
 function bytes32() {
   const buffer = new Buffer(32);
   uuid(null, buffer, 0);
@@ -219,7 +249,7 @@ async function setup(accounts) {
   return [token, custody];
 }
 
-async function notifyReplay(custody, cancel, exchange){
+async function notifyReplay(custody, cancel, exchange) {
   let [cv, cr, cs] = await getSignature(cancel, exchange);
   await  custody.notifyReplay([cancel.uuid, cancel.price, cancel.qty, cancel.cancelled, cancel.expiry], cancel.isBuy, cancel.user, cv, cr, cs, {from: cancel.user});
 

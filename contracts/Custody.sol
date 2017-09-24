@@ -1,14 +1,6 @@
 pragma solidity ^0.4.11;
 
 
-/**
-* people can put money
-* signed request is received
-    U and E have signed
-
-
-*/
-
 import "tokens/HumanStandardToken.sol";
 import "tokens/StandardToken.sol";
 
@@ -31,7 +23,6 @@ contract Custody {
     uint qty;
     }
 
-
     event LOG(address _user, address calaculated, bytes32 _hash);
 
     event CustodyEvent(address _user, uint256 _value, string _unit, string _action);
@@ -40,6 +31,8 @@ contract Custody {
 
     mapping (address => uint256) public tokens;
 
+    mapping (address => uint) public lastStateSyncBlocks;
+
     mapping (uint => uint) public filled;
 
     address public tokenid;
@@ -47,6 +40,8 @@ contract Custody {
     address public owner;
 
     uint freezeBlock;
+
+    uint withdrawBlocks;
 
     HumanStandardToken public token;
 
@@ -72,9 +67,10 @@ contract Custody {
         _;
     }
 
-    function Custody(address _owner, uint _freezeBlock){
+    function Custody(address _owner, uint _freezeBlock, uint _withdrawBlocks){
         owner = _owner;
         freezeBlock = _freezeBlock;
+        withdrawBlocks = _withdrawBlocks;
     }
 
     function setToken(address _token) onlyOwner notFrozen {
@@ -106,16 +102,19 @@ contract Custody {
         updateOrderQuantities(order1, order2, execution);
         validateOrderAndExecution(order1, execution);
         validateOrderAndExecution(order2, execution);
+        lastStateSyncBlocks[order1.user] = block.number;
+        lastStateSyncBlocks[order2.user] = block.number;
     }
 
     //nonce needs to be added to prevent replay attack
     function withdraw(address _user, uint256 _eth, uint256 _tokens) onlyOwner notDisabled {
+        require(lastStateSyncBlocks[_user] + withdrawBlocks <= block.number);
         send(_user, _eth, _tokens);
     }
 
     function notifyReplay(uint[] orderUINT, bool isBuy, address user, uint8 v, bytes32 r, bytes32 s){
         Order memory order = Order(orderUINT[0], orderUINT[1], orderUINT[2], orderUINT[3], orderUINT[4], isBuy, user);
-        require(isVerified(order, owner, v,r,s));
+        require(isVerified(order, owner, v, r, s));
         require(order.qty - order.cancelled < filled[order.uuid]);
         disabled = true;
     }
