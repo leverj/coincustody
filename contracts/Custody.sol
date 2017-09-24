@@ -47,8 +47,14 @@ contract Custody {
 
     uint256 public tokenCount;
 
+    bool public disabled;
     modifier onlyOwner {
         require(msg.sender == owner);
+        _;
+    }
+
+    modifier notDisabled{
+        require(!disabled);
         _;
     }
 
@@ -80,7 +86,7 @@ contract Custody {
     uint[] ids,
     bool[] isBuy,
     address[] users,
-    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner {
+    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
         Order memory order1 = Order(ids[0], priceandqty[0], priceandqty[1], isBuy[0]);
         Order memory order2 = Order(ids[1], priceandqty[2], priceandqty[3], isBuy[1]);
         Execution memory execution = Execution(ids[2], priceandqty[4], priceandqty[5]);
@@ -91,27 +97,28 @@ contract Custody {
         validateOrderAndExecution(order2, execution);
     }
 
-    function updateOrderQuantities(Order order1, Order order2, Execution execution) internal {
-        require(order1.qty - filled[order1.uuid] >= execution.qty);
-        require(order2.qty - filled[order2.uuid] >= execution.qty);
-        filled[order1.uuid] += execution.qty;
-        filled[order2.uuid] += execution.qty;
-    }
-
     //nonce needs to be added to prevent replay attack
     function withdraw(uint[] priceandqty,
     uint[] ids,
     bool[] isBuy,
     address[] users,
     uint256[] withdraws,
-    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner {
+    uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
         // loop over all pending executions
         syncExecutions(priceandqty, ids, isBuy, users, v, r, s);
         send(users[0], withdraws[0], withdraws[1]);
         send(users[1], withdraws[2], withdraws[3]);
     }
 
-    function send(address _user, uint256 _eth, uint256 _tokens){
+    function notifyReplay(uint uuid, uint price, uint qty, uint cancelled, bool isBuy, uint8 v, bytes32 r, bytes32 s){
+        bytes32 hash = keccak256(uuid, price, qty, cancelled, isBuy);
+        address signer = ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s);
+        require(signer == owner);
+        require(qty - cancelled < filled[uuid]);
+        disabled = true;
+    }
+
+    function send(address _user, uint256 _eth, uint256 _tokens) internal {
         require(ethers[_user] >= _eth);
         require(tokens[_user] >= _tokens);
         ethers[_user] -= _eth;
@@ -142,6 +149,14 @@ contract Custody {
         bytes32 hash = keccak256(order.uuid, order.price, order.qty, order.isBuy);
         return user == ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s);
     }
+
+    function updateOrderQuantities(Order order1, Order order2, Execution execution) internal {
+        require(order1.qty - filled[order1.uuid] >= execution.qty);
+        require(order2.qty - filled[order2.uuid] >= execution.qty);
+        filled[order1.uuid] += execution.qty;
+        filled[order2.uuid] += execution.qty;
+    }
+
 
 
 }

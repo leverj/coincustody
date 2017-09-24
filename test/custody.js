@@ -73,8 +73,8 @@ contract('Order posted', function (accounts) {
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(user2, token)).to.be.eql(9811);
     expect(await lib.balance(custody.address, token)).to.be.eql(279);
-    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000-10);
-    expect((await custody.ethers(user2)).toNumber()).to.eql(20000000-11);
+    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10);
+    expect((await custody.ethers(user2)).toNumber()).to.eql(20000000 - 11);
   });
 });
 
@@ -120,12 +120,104 @@ contract('replay attack', function (accounts) {
   });
 });
 
+contract('User halting custody contract', function (accounts) {
+  let token, custody;
+  let user1 = accounts[1];
+  let user2 = accounts[2];
+
+  before(async function () {
+    [token, custody] = await setup(accounts);
+    await lib.sendToken(100, user1, custody, token);
+    await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
+    await lib.sendToken(200, user2, custody, token);
+    await web3.eth.sendTransaction({from: user2, to: custody.address, value: 20000000});
+  });
+  /**
+   * orders: price, quantity
+   * signature
+   * execution, user1 order, user2 order check signature
+   */
+  it('user should be able to halt custody contract if found any discrepancy to avoid further damage.', async function () {
+    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
+    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
+
+    let types = ['uint', 'uint', 'uint', 'bool'];
+    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
+    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
+    let [cv, cr, cs] = await getSignature(['uint', 'uint', 'uint', 'uint', 'bool'], [order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy], accounts[0]);
+    let execution = {uuid: 3, price: 10, qty: 100};
+    try {
+      await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy, cv, cr, cs);
+      expect().fail("should have failed");
+    } catch (e) {
+      expect(e.message).to.not.eql("should have failed");
+    }
+    // compromised exchange sends execution with cancelled order of user1.
+    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
+      [order1.uuid, order2.uuid, execution.uuid],
+      [order1.isBuy, order2.isBuy],
+      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+
+    // user1 finds that his cancelled order has been executed by exchange,
+    // therefore notifying custody contract.
+    await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, order1.qty, order1.isBuy, cv, cr, cs, {from: user1});
+    expect(await custody.disabled()).to.eql(true);
+  });
+});
+
+contract('User halting custody contract for partial cancelled', function (accounts) {
+  let token, custody;
+  let user1 = accounts[1];
+  let user2 = accounts[2];
+
+  before(async function () {
+    [token, custody] = await setup(accounts);
+    await lib.sendToken(100, user1, custody, token);
+    await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
+    await lib.sendToken(200, user2, custody, token);
+    await web3.eth.sendTransaction({from: user2, to: custody.address, value: 20000000});
+  });
+  /**
+   * orders: price, quantity
+   * signature
+   * execution, user1 order, user2 order check signature
+   */
+  it('user should be able to halt custody contract if found any discrepancy to avoid further damage.', async function () {
+    let order1 = {uuid: 1, price: 10, qty: 100, isBuy: true, user: user1};
+    let order2 = {uuid: 2, price: 10, qty: 100, isBuy: false, user: user2};
+
+    let types = ['uint', 'uint', 'uint', 'bool'];
+    let [v1, r1, s1] = await getSignature(types, [order1.uuid, order1.price, order1.qty, order1.isBuy], order1.user);
+    let [v2, r2, s2] = await getSignature(types, [order2.uuid, order2.price, order2.qty, order2.isBuy], order2.user);
+    let execution = {uuid: 3, price: 10, qty: 50};
+    // exchange sends execution for half the quantity.
+    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
+      [order1.uuid, order2.uuid, execution.uuid],
+      [order1.isBuy, order2.isBuy],
+      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+    // user1 cancels rest of the order
+    let [cv, cr, cs] = await getSignature(['uint', 'uint', 'uint', 'uint', 'bool'], [order1.uuid, order1.price, order1.qty, 50, order1.isBuy], accounts[0]);
+
+    // compromised exchange sends execution with cancelled order of user1.
+    await custody.withdraw([order1.price, order1.qty, order2.price, order2.qty, execution.price, execution.qty],
+      [order1.uuid, order2.uuid, execution.uuid],
+      [order1.isBuy, order2.isBuy],
+      [order1.user, order2.user], [10, 10, 11, 11], [v1, v2], [r1, r2], [s1, s2]);
+
+    // user1 finds that his cancelled order has been executed by exchange,
+    // therefore notifying custody contract.
+    await  custody.notifyReplay(order1.uuid, order1.price, order1.qty, 50, order1.isBuy, cv, cr, cs, {from: user1});
+    expect(await custody.disabled()).to.eql(true);
+  });
+});
+
+
 function bytes32() {
   const buffer = new Buffer(32);
   uuid(null, buffer, 0);
   uuid(null, buffer, 16);
 
-  return  ethUtil.bufferToHex(buffer);
+  return ethUtil.bufferToHex(buffer);
   // return buffer.toString('hex');
 }
 
