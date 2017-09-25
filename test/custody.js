@@ -77,6 +77,31 @@ contract('Order posted', function (accounts) {
   });
 });
 
+contract('execution sync', function(accounts){
+  let token, custody;
+  let user1 = accounts[1];
+  let user2 = accounts[2];
+
+  before(async function () {
+    [token, custody] = await setup(accounts);
+    await lib.sendToken(100, user1, custody, token);
+    await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
+    await lib.sendToken(200, user2, custody, token);
+    await web3.eth.sendTransaction({from: user2, to: custody.address, value: 20000000});
+  });
+
+  it('execution sync should not be able to put any user balance to negative', async function () {
+    let [order1, order2, execution] = orders(user1, user2);
+    execution.qty = 210;
+    try {
+      await syncExecutions(custody, order1, order2, execution);
+      expect().fail('should have failed')
+    } catch (e) {
+      expect(e.message).to.eql('VM Exception while processing transaction: invalid opcode');
+    }
+  });
+});
+
 contract('replay attack', function (accounts) {
   let token, custody;
   let user1 = accounts[1];
