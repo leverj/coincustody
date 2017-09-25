@@ -88,10 +88,15 @@ contract Custody {
         tokenCount += _value;
         tokens[msg.sender] += _value;
         return token.transferFrom(msg.sender, this, _value);
-        //        LOG(token, _value);
-        //        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
     }
 
+    /* still trying for delegatecall. otferwise depositToken will be used*/
+    function delegateTokens(uint256 _value) returns (bool result){
+        tokenCount += _value;
+        tokens[msg.sender] += _value;
+        //        LOG(token, _value);
+        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
+    }
 
     function syncExecutions(uint[] orderUINT, bool[] isBuy, address[] users, uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
         Order memory order1 = Order(orderUINT[0], orderUINT[1], orderUINT[2], orderUINT[3], orderUINT[4], isBuy[0], users[0]);
@@ -104,6 +109,7 @@ contract Custody {
         validateOrderAndExecution(order2, execution);
         lastStateSyncBlocks[order1.user] = block.number;
         lastStateSyncBlocks[order2.user] = block.number;
+        processExecution(order1, order2, execution);
     }
 
     //nonce needs to be added to prevent replay attack
@@ -132,7 +138,9 @@ contract Custody {
         token.transfer(_user, _tokens);
     }
 
-    function processExecution(address buyer, address seller, Execution execution) internal {
+    function processExecution(Order order1, Order order2, Execution execution) internal {
+        address buyer = order1.isBuy ? order1.user : order2.user;
+        address seller = order1.isBuy ? order2.user : order1.user;
         uint256 amount = execution.price * execution.qty;
         tokens[buyer] += execution.qty;
         tokens[seller] -= execution.qty;

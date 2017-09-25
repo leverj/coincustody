@@ -32,13 +32,15 @@ contract('deposit', function (accounts) {
 
   it('user is able to send ether and tokens to custody contract', async function () {
     await lib.sendToken(100, user1, custody, token);
-    // await custody.depositToken(100, {from: user1});
+    // await custody.delegateTokens(100, {from: user1});
+    await lib.forceMine(300);
     await web3.eth.sendTransaction({from: user1, to: custody.address, value: 10000000});
+    expect((await custody.tokens(user1)).toNumber()).to.eql(100);
     expect(await lib.balance(user1, token)).to.be.eql(9900);
     expect(await lib.balance(custody.address, token)).to.be.eql(100);
     expect(await web3.eth.getBalance(custody.address)).to.eql(10000000);
     expect((await custody.ethers(user1)).toNumber()).to.eql(10000000);
-    expect((await custody.tokens(user1)).toNumber()).to.eql(100);
+
   });
 });
 
@@ -68,8 +70,10 @@ contract('Order posted', function (accounts) {
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(user2, token)).to.be.eql(9811);
     expect(await lib.balance(custody.address, token)).to.be.eql(279);
-    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10);
-    expect((await custody.ethers(user2)).toNumber()).to.eql(20000000 - 11);
+    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10 - execution.qty*execution.price);
+    expect((await custody.ethers(user2)).toNumber()).to.eql(20000000 - 11 + execution.qty*execution.price);
+    expect((await custody.tokens(user1)).toNumber()).to.eql(100 - 10 + execution.qty);
+    expect((await custody.tokens(user2)).toNumber()).to.eql(200 - 11 - execution.qty);
   });
 });
 
@@ -218,7 +222,7 @@ contract("withraw funds", function (accounts) {
     await custody.withdraw(user1, 10, 10);
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(custody.address, token)).to.be.eql(290);
-    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10);
+    expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10 - 100*10);
   })
 });
 
