@@ -80,13 +80,13 @@ contract Custody {
 
     /*user can deposit ether*/
     function() payable {
-        ethers[msg.sender] += msg.value;
+        ethers[msg.sender] = SafeMath.add(ethers[msg.sender],msg.value);
     }
 
     /*user can deposit token. user will need to use token.allow(custody, _value) before calling this method.*/
     function depositToken(uint256 _value) returns (bool result){
-        tokenCount += _value;
-        tokens[msg.sender] += _value;
+        tokenCount = SafeMath.add(tokenCount,_value);
+        tokens[msg.sender] = SafeMath.add(tokens[msg.sender],_value);
         return token.transferFrom(msg.sender, this, _value);
     }
 
@@ -114,7 +114,7 @@ contract Custody {
 
     //nonce needs to be added to prevent replay attack
     function withdraw(address _user, uint256 _eth, uint256 _tokens) onlyOwner notDisabled {
-        require(lastStateSyncBlocks[_user] + withdrawBlocks <= block.number);
+        require(SafeMath.add(lastStateSyncBlocks[_user] , withdrawBlocks) <= block.number);
         send(_user, _eth, _tokens);
     }
 
@@ -132,8 +132,8 @@ contract Custody {
     function send(address _user, uint256 _eth, uint256 _tokens) internal {
         require(ethers[_user] >= _eth);
         require(tokens[_user] >= _tokens);
-        ethers[_user] -= _eth;
-        tokens[_user] -= _tokens;
+        ethers[_user] = SafeMath.sub(ethers[_user] , _eth);
+        tokens[_user] = SafeMath.sub(tokens[_user] , _tokens);
         _user.transfer(_eth);
         token.transfer(_user, _tokens);
     }
@@ -141,11 +141,11 @@ contract Custody {
     function processExecution(Order order1, Order order2, Execution execution) internal {
         address buyer = order1.isBuy ? order1.user : order2.user;
         address seller = order1.isBuy ? order2.user : order1.user;
-        uint256 amount = execution.price * execution.qty;
-        tokens[buyer] += execution.qty;
+        uint256 amount = SafeMath.mul(execution.price, execution.qty);
+        tokens[buyer] = SafeMath.add(tokens[buyer], execution.qty);
         tokens[seller] = SafeMath.sub(tokens[seller], execution.qty);
         ethers[buyer] = SafeMath.sub(ethers[buyer], amount);
-        ethers[seller] += amount;
+        ethers[seller] = SafeMath.add(ethers[seller], amount);
     }
 
     function validateOrderAndExecution(Order order, Execution execution) internal {
@@ -166,8 +166,8 @@ contract Custody {
     function updateOrderQuantities(Order order1, Order order2, Execution execution) internal {
         require(SafeMath.sub(order1.qty, filled[order1.uuid]) >= execution.qty);
         require(SafeMath.sub(order2.qty, filled[order2.uuid]) >= execution.qty);
-        filled[order1.uuid] += execution.qty;
-        filled[order2.uuid] += execution.qty;
+        filled[order1.uuid] = SafeMath.add(filled[order1.uuid], execution.qty);
+        filled[order2.uuid] = SafeMath.add(filled[order2.uuid], execution.qty);
     }
 
 }
