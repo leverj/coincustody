@@ -2,7 +2,7 @@ pragma solidity ^0.4.11;
 
 
 import "tokens/HumanStandardToken.sol";
-import "tokens/StandardToken.sol";
+import "./SafeMath.sol";
 
 
 contract Custody {
@@ -121,7 +121,7 @@ contract Custody {
     function notifyReplay(uint[] orderUINT, bool isBuy, address user, uint8 v, bytes32 r, bytes32 s){
         Order memory order = Order(orderUINT[0], orderUINT[1], orderUINT[2], orderUINT[3], orderUINT[4], isBuy, user);
         require(isVerified(order, owner, v, r, s));
-        require(order.qty - order.cancelled < filled[order.uuid]);
+        require(SafeMath.sub(order.qty, order.cancelled) < filled[order.uuid]);
         disabled = true;
     }
 
@@ -143,8 +143,8 @@ contract Custody {
         address seller = order1.isBuy ? order2.user : order1.user;
         uint256 amount = execution.price * execution.qty;
         tokens[buyer] += execution.qty;
-        tokens[seller] -= execution.qty;
-        ethers[buyer] -= amount;
+        tokens[seller] = SafeMath.sub(tokens[seller], execution.qty);
+        ethers[buyer] = SafeMath.sub(ethers[buyer], amount);
         ethers[seller] += amount;
     }
 
@@ -164,8 +164,8 @@ contract Custody {
     }
 
     function updateOrderQuantities(Order order1, Order order2, Execution execution) internal {
-        require(order1.qty - filled[order1.uuid] >= execution.qty);
-        require(order2.qty - filled[order2.uuid] >= execution.qty);
+        require(SafeMath.sub(order1.qty, filled[order1.uuid]) >= execution.qty);
+        require(SafeMath.sub(order2.qty, filled[order2.uuid]) >= execution.qty);
         filled[order1.uuid] += execution.qty;
         filled[order2.uuid] += execution.qty;
     }

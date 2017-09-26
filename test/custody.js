@@ -248,7 +248,7 @@ contract("withraw funds", function (accounts) {
     expect(await lib.balance(user1, token)).to.be.eql(9910);
     expect(await lib.balance(custody.address, token)).to.be.eql(290);
     expect((await custody.ethers(user1)).toNumber()).to.eql(10000000 - 10 - 100*10);
-  })
+  });
 });
 
 function bytes32() {
