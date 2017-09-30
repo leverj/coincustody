@@ -2,6 +2,7 @@ module.exports = function (grunt) {
   // Project configuration.
   const dist = './dist/';
   const server = './src/server/';
+  const common = './src/common/';
   const client = './src/client/';
   const contracts = './build/contracts/';
 
@@ -30,6 +31,12 @@ module.exports = function (grunt) {
               cwd: server,
               src: ['**/*'],
               dest: dist + "/src/server"
+            },
+            {
+              expand: true,
+              cwd: common,
+              src: ['**/*'],
+              dest: dist + "/src/common"
             },
             {
               expand: true,
