@@ -23,9 +23,16 @@ contract Custody {
     uint qty;
     }
 
+    struct LastExecution {
+    bytes32 hash;
+    uint time;
+    }
+
     event LOG(address _user, address calaculated, bytes32 _hash);
 
     event CustodyEvent(address _user, uint256 _value, string _unit, string _action);
+
+    event ExecutionSync(uint _order1, uint _order2, uint _execution, bytes32 _hash);
 
     mapping (address => uint256) public ethers;
 
@@ -34,6 +41,8 @@ contract Custody {
     mapping (address => uint) public lastStateSyncBlocks;
 
     mapping (uint => uint) public filled;
+
+    mapping (address => LastExecution) public lastExecutions;
 
     address public tokenid;
 
@@ -80,13 +89,13 @@ contract Custody {
 
     /*user can deposit ether*/
     function() payable {
-        ethers[msg.sender] = SafeMath.add(ethers[msg.sender],msg.value);
+        ethers[msg.sender] = SafeMath.add(ethers[msg.sender], msg.value);
     }
 
     /*user can deposit token. user will need to use token.allow(custody, _value) before calling this method.*/
     function depositToken(uint256 _value) returns (bool result){
-        tokenCount = SafeMath.add(tokenCount,_value);
-        tokens[msg.sender] = SafeMath.add(tokens[msg.sender],_value);
+        tokenCount = SafeMath.add(tokenCount, _value);
+        tokens[msg.sender] = SafeMath.add(tokens[msg.sender], _value);
         return token.transferFrom(msg.sender, this, _value);
     }
 
@@ -114,7 +123,7 @@ contract Custody {
 
     //nonce needs to be added to prevent replay attack
     function withdraw(address _user, uint256 _eth, uint256 _tokens) onlyOwner notDisabled {
-        require(SafeMath.add(lastStateSyncBlocks[_user] , withdrawBlocks) <= block.number);
+        require(SafeMath.add(lastStateSyncBlocks[_user], withdrawBlocks) <= block.number);
         send(_user, _eth, _tokens);
     }
 
@@ -132,8 +141,8 @@ contract Custody {
     function send(address _user, uint256 _eth, uint256 _tokens) internal {
         require(ethers[_user] >= _eth);
         require(tokens[_user] >= _tokens);
-        ethers[_user] = SafeMath.sub(ethers[_user] , _eth);
-        tokens[_user] = SafeMath.sub(tokens[_user] , _tokens);
+        ethers[_user] = SafeMath.sub(ethers[_user], _eth);
+        tokens[_user] = SafeMath.sub(tokens[_user], _tokens);
         _user.transfer(_eth);
         token.transfer(_user, _tokens);
     }
@@ -170,4 +179,10 @@ contract Custody {
         filled[order2.uuid] = SafeMath.add(filled[order2.uuid], execution.qty);
     }
 
+    //time has to be added to execution.
+    function getExecutionHash(Execution execution, Order order1, Order order2) internal returns (bytes32 _hash){
+        return keccak256(order1.uuid, order1.price, order1.qty, order1.cancelled, order1.expiry, order1.isBuy, order1.user,
+        order2.uuid, order2.price, order2.qty, order2.cancelled, order2.expiry, order2.isBuy, order2.user,
+        execution.executionid, execution.price, execution.qty);
+    }
 }

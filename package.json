@@ -4,7 +4,8 @@
   "description": "decentralized coin custody for leverj.io platform",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "start": "BLUEBIRD_DEBUG=1 NODE_ENV=dev nodemon --delay 1.5 src/server/index.js"
   },
   "repository": {
     "type": "git",
@@ -33,14 +34,22 @@
     "ethjs-query": "0.2.4",
     "ethjs-rpc": "^0.1.7",
     "expect.js": "^0.3.1",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.2.0",
+    "grunt-contrib-clean": "^1.1.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-exec": "^3.0.0",
     "lodash": "^4.17.4",
     "truffle-hdwallet-provider": "0.0.3",
-    "uuid": "^3.1.0",
-    "web3": "^1.0.0-beta.18"
+    "uuid": "^3.1.0"
   },
   "dependencies": {
     "debug": "^3.0.1",
     "ethereumjs-abi": "^0.6.4",
-    "ethereumjs-util": "^5.1.2"
+    "ethereumjs-util": "^5.1.2",
+    "web3": "^1.0.0-beta.18",
+    "express": "^4.15.4",
+    "safe-json-stringify": "^1.0.4"
   }
 }
