@@ -1,0 +1,28 @@
+{
+  "custody": {
+    "owner": "0x833a2FA19349dAf085B94376ac3042197cF66443",
+    "tokenid": "0xe7e47a6538e05403c679c332207b973ef9299e93",
+    "freezeBlock": "100",
+    "withdrawBlock": "10"
+  },
+  "db": {
+    "namespace": "leverj",
+    "replicationFactor": 1,
+    "contactPoints":          ["localhost", "cassandra"]
+  },
+  "usercreateddos":              {
+    "maxcount":      10,
+    "burst":         2,
+    "limit":         8,
+    "maxexpiry":     3600,
+    "checkinterval": 1,
+    "errormessage":  "Too many requests from your ip"
+  },
+  "port":"9010",
+  "tokensale":"0x729b617d1cd7fc69a511105bcc1b072f6674c227",
+  "common":{
+    "custodyid": "0x1d5e470b675b0a756e47bf354e27908db4ec47df",
+    "tokenid": "0xe7e47a6538e05403c679c332207b973ef9299e93"
+  }
+}
+

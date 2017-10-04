@@ -1,0 +1,77 @@
+:root {
+  --advisory        : var(--error);
+  --ask             : #d9534f;
+  --band-border     : #555860;
+  --bid             : #5cb85c;
+  --border-on-light : #3d3d67;
+  --bright          : #e1e2e5;
+  --dark-bg         : #181627;
+  --data-hover      : indigo;
+  --delivery        : yellow;
+  --dim             : #535874;
+  --error           : red;
+  --input-bg        : #424564;
+  --light-bg        : #2b2e52;
+  --light-border    : var(--light-bg);
+  --lighter-border  : #484869;
+  --link            : lightblue;
+  --link-hover      : blanchedalmond;
+  --normal          : #9ea5b5;
+  --normal-bg       : #1f1d30;
+  --normal-border   : #272538 thin solid;
+  --notice-bg       : navajowhite;
+  --pk-warning      : var(--warning);
+  --unconfirmed     : indigo;
+  --warning         : orange;
+}
+
+body {
+  margin           : 0;
+  /*background-image      : url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODAiIGhlaWdodD0iNDgwIj48cGF0aCBmaWxsPSIjZDNkM2QzIiBkPSJNMjM1IDQwaDEwdjQwMGgtMTB6Ii8+PGNsaXBQYXRoIGlkPSJhIj48cGF0aCBkPSJNNDAgMjQwaDIwMHY0MDBINDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImIiPjxwYXRoIGQ9Ik0yNDAgNDBoMjAwdjQwMEgyNDB6Ii8+PC9jbGlwUGF0aD48ZWxsaXBzZSBjeD0iMjQwIiBjeT0iMzQwIiBmaWxsPSIjZDNkM2QzIiByeT0iMTAwIiByeD0iMjAwIiBjbGlwLXBhdGg9InVybCgjYSkiLz48ZWxsaXBzZSBjeD0iMjQwIiBjeT0iMTQwIiBmaWxsPSIjZDNkM2QzIiByeT0iMTAwIiByeD0iMjAwIiBjbGlwLXBhdGg9InVybCgjYikiLz48L3N2Zz4=);*/
+  background       : no-repeat fixed center;
+  font-family      : Helvetica, Arial, Verdana, sans-serif !important;
+  /*color            : var(--normal);*/
+  /*background-color : var(--normal-bg);*/
+}
+
+.wrapper {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  grid-template-rows: 30px 500px 500px;
+  /* @formatter:off */
+  grid-template-areas   :
+  "leverj-menu          leverj-menu"
+  "leverj-order-entry   leverj-account"
+  "leverj-order-book    leverj-order-book"
+  /* @formatter:on */
+}
+
+#leverj-menu{
+  grid-area: leverj-menu;
+  width: 100vw;
+  height: 30px;
+  border-bottom: var(--normal-border);
+}
+#leverj-order-entry{
+  grid-area: leverj-order-entry;
+  width: 100%;
+  height: 100%;
+  border-left: var(--normal-border);
+  border-bottom: var(--normal-border);
+}
+#leverj-account{
+  grid-area: leverj-account;
+  width: 100%;
+  height: 100%;
+  border-left: var(--normal-border);
+  border-bottom: var(--normal-border);
+  border-right: var(--normal-border);
+}
+#leverj-order-book{
+  grid-area: leverj-order-book;
+  width: 100%;
+  height: 100%;
+  border-left: var(--normal-border);
+  border-bottom: var(--normal-border);
+  border-right: var(--normal-border);
+}

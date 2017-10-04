@@ -4,12 +4,12 @@ module.exports = function (grunt) {
   const server = './src/server/';
   const common = './src/common/';
   const client = './src/client/';
-  const contracts = './build/contracts/';
+  const contracts = './build/';
 
   grunt.initConfig(
     {
       pkg: grunt.file.readJSON('package.json'),
-      clean: {dist: [dist]},
+      clean: {dist: [dist, "./migrations/config"]},
       exec: {compile: "truffle compile"},
       copy: {
         main: {
@@ -17,7 +17,7 @@ module.exports = function (grunt) {
             {
               expand: true,
               cwd: client,
-              src: ['index.html'],
+              src: ['**/*.html',"**/*.css"],
               dest: dist + "/src/client"
             },
             {
@@ -48,7 +48,13 @@ module.exports = function (grunt) {
               expand: true,
               cwd: contracts,
               src: ['**/*'],
-              dest: dist + "/contracts"
+              dest: dist + "/build"
+            },
+            {
+              expand: true,
+              cwd: "./config",
+              src: ['**/*'],
+              dest: "./migrations/config"
             }
           ]
         }
@@ -62,8 +68,8 @@ module.exports = function (grunt) {
       },
       watch: {
         s1: {
-          files: ['client/*'],
-          tasks: ['default']
+          files: [client + "/**", common + "/**"],
+          tasks: ['copy', 'browserify']
         }
       }
     });

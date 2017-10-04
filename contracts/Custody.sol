@@ -2,6 +2,7 @@ pragma solidity ^0.4.11;
 
 
 import "tokens/HumanStandardToken.sol";
+import "tokens/Token.sol";
 import "./SafeMath.sol";
 
 
@@ -52,7 +53,7 @@ contract Custody {
 
     uint withdrawBlocks;
 
-    HumanStandardToken public token;
+//    Token public token;
 
     uint256 public tokenCount;
 
@@ -84,7 +85,7 @@ contract Custody {
 
     function setToken(address _token) onlyOwner notFrozen {
         tokenid = _token;
-        token = HumanStandardToken(_token);
+//        token = HumanStandardToken(_token);
     }
 
     /*user can deposit ether*/
@@ -96,15 +97,7 @@ contract Custody {
     function depositToken(uint256 _value) returns (bool result){
         tokenCount = SafeMath.add(tokenCount, _value);
         tokens[msg.sender] = SafeMath.add(tokens[msg.sender], _value);
-        return token.transferFrom(msg.sender, this, _value);
-    }
-
-    /* still trying for delegatecall. otferwise depositToken will be used*/
-    function delegateTokens(uint256 _value) returns (bool result){
-        tokenCount += _value;
-        tokens[msg.sender] += _value;
-        //        LOG(token, _value);
-        return token.delegatecall(bytes4(sha3("transfer(address,uint256)")), address(this), _value);
+        return Token(tokenid).transferFrom(msg.sender, this, _value);
     }
 
     function syncExecutions(uint[] orderUINT, bool[] isBuy, address[] users, uint8[] v, bytes32[] r, bytes32[] s) onlyOwner notDisabled {
@@ -144,7 +137,7 @@ contract Custody {
         ethers[_user] = SafeMath.sub(ethers[_user], _eth);
         tokens[_user] = SafeMath.sub(tokens[_user], _tokens);
         _user.transfer(_eth);
-        token.transfer(_user, _tokens);
+        Token(tokenid).transfer(_user, _tokens);
     }
 
     function processExecution(Order order1, Order order2, Execution execution) internal {

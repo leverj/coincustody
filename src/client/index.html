@@ -3,9 +3,60 @@
   <title>Buy Tokens</title>
   <script src="./jquery/dist/jquery.min.js"></script>
   <script src="./client.js"></script>
+  <link rel="stylesheet" type="text/css" href="./main.css">
 </head>
-<body>
-token buys.
+<body class="container">
+
+<div class="wrapper">
+  <div id="leverj-menu"></div>
+  <div id="leverj-order-book"></div>
+  <div id="leverj-order-entry">
+    <form>
+      <div>
+        <label for="side">Side</label>
+        <select id="side">
+          <option value="true">Buy</option>
+          <option value="false">Sell</option>
+        </select>
+      </div>
+      <div>
+        <label for="price">Price</label>
+        <input class="form-control" type="number" id="price"/>
+      </div>
+      <div>
+        <label for="quantity">Quantity</label>
+        <input class="form-control" type="number" id="quantity"/>
+      </div>
+      <button type="submit" id="place-order" class="btn btn-default">Submit</button>
+    </form>
+
+  </div>
+  <div id="leverj-account">
+    <div><span>user id</span>: <span id="user-id"></span></div>
+    <div><span>eth balance</span>: <span id="eth-balance"></span></div>
+    <div><span>eth deposited</span>: <span id="eth-deposited"></span></div>
+    <table>
+      <tr>
+        <td>token id</td>
+        <td>balance</td>
+        <td>approved</td>
+        <td>deposited</td>
+
+      </tr>
+      <tr>
+        <td id="token-id"></td>
+        <td id="token-balance"></td>
+        <td id="token-approved"></td>
+        <td id="token-deposited"></td>
+      </tr>
+    </table>
+    <input id="approve-token" type="number" placeholder="approve tokens">
+    <button id="approve-token-action">Approve tokens</button><br>
+    <input id="transfer-token" type="number" placeholder="transfer tokens">
+    <button id="transfer-token-action">Transfer tokens</button>
+
+  </div>
+</div>
 <div id="log-area"></div>
 </body>
 </html>

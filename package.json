@@ -4,7 +4,7 @@
   "description": "decentralized coin custody for leverj.io platform",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js",
+    "test": "NODE_ENV=test node test.js",
     "start": "BLUEBIRD_DEBUG=1 NODE_ENV=dev nodemon --delay 1.5 src/server/index.js"
   },
   "repository": {
@@ -47,15 +47,21 @@
   "dependencies": {
     "affirm.js": "^1.0.0",
     "binary-search-tree": "^0.2.6",
+    "body-parser": "latest",
     "cassandra-driver": "^3.3.0",
+    "compression": "^1.7.1",
     "config": "^1.26.2",
     "debug": "^3.0.1",
     "ethereumjs-abi": "^0.6.4",
     "ethereumjs-util": "^5.1.2",
     "express": "^4.15.4",
+    "helmet": "^3.8.2",
     "microtime.js": "^1.0.0",
     "queue.js": "^0.1.3",
+    "rest.js": "^0.2.1",
     "safe-json-stringify": "^1.0.4",
+    "serve-favicon": "^2.4.5",
+    "socket.io": "^2.0.3",
     "web3": "^1.0.0-beta.18"
   }
 }
